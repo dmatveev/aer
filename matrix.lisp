@@ -1,20 +1,12 @@
-;;; common utils ---------------------------------------------------------------
-
 (defmacro with-gensyms ((&rest names) &body body)
   `(let ,(loop for n in names collect `(,n (gensym)))
      ,@body))
-
-
-;;; generic functions ----------------------------------------------------------
 
 (defgeneric matrix* (left right)
   (:documentation "Multiply two objects"))
 
 (defgeneric matrix-ref (matrix i j)
   (:documentation "Reference a matrix cell"))
-
-
-;;; matrix class ---------------------------------------------------------------
 
 (defclass matrix ()
   ((data :reader data)))
@@ -34,7 +26,7 @@
   `(second (array-dimensions (data ,matrix))))
 
 (defmacro dimensions (matrix)
-  `(list (rows ,matrix) (cols ,matrix)))
+  `(list (matrix-rows ,matrix) (matrix-cols ,matrix)))
 
 (defmacro matrix-reference (matrix row col)
   `(aref (data ,matrix) ,row ,col))
@@ -66,16 +58,16 @@
 	 (funcall ,closure (matrix-ref ,matrix i j))))
 
 (defmethod matrix* ((left matrix) (right matrix))
-  (if (equal (cols left) (rows right))
-      (matrix-create-tabulated (result-i (rows left) result-j (cols right))
+  (if (equal (matrix-cols left) (matrix-rows right))
+      (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols right))
         (do ((i 0 (1+ i))
              (s 0 (+ s (* (matrix-ref left result-i i)
 						  (matrix-ref right i result-j))))) 
-            ((= i (cols left)) s)))
+            ((= i (matrix-cols left)) s)))
       (error "Operation can not be performed")))
 
 (defmethod matrix* ((left matrix) (right rational))
-  (matrix-create-tabulated (result-i (rows left) result-j (cols left))
+  (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols left))
     (* right (matrix-ref left result-i result-j))))
 
 (defmethod print-object ((object matrix) stream)

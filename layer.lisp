@@ -10,7 +10,8 @@
 (defmethod initialize-instance :after ((instance layer)
 									   &key (inputs 1) (neurons 1))
   (setf (slot-value instance 'weights)
-		(make-instance 'matrix :rows inputs :cols neurons)))
+		(matrix-create-tabulated (row inputs col neurons)
+		  (random 1.0))))
 
 (defmethod process ((instance layer) (input matrix))
   (matrix-collect (matrix* input (weights instance)) (activation instance)))
