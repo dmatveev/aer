@@ -1,18 +1,38 @@
 (defclass network ()
   ((layers :initform (make-array 5 :adjustable t :fill-pointer 0)
-		   :reader layers)))
+           :reader layers)))
 
-(defmethod initialize-instance :after ((instance network) &key
-                                        (inputs 1)
-                                        (configuration '(1)))
+(defmethod initialize-instance :after ((instance network) &key (inputs 1) (config '(1)))
   (let ((prev-layer-outputs inputs))
-    (dolist (neurons configuration)
+    (dolist (neurons config)
       (vector-push (make-instance 'layer :inputs prev-layer-outputs :neurons neurons)
                    (slot-value instance 'layers)) 
       (setf prev-layer-outputs neurons))))
 
 (defmethod process ((instance network) (input matrix))
   (let ((prev-layer-output input))
-	(loop for layer across (layers instance) do
-	  (setf prev-layer-output (process layer prev-layer-output)))
-	prev-layer-output))
+    (loop for layer across (layers instance) do
+      (setf prev-layer-output (process layer prev-layer-output)))
+    prev-layer-output))
+
+(defun calculate-error (result desired)
+  (let* ((error-size (length desired))
+         (error-vector (make-array error-size))) 
+    (matrix-do (i 1 j error-size)
+      (setf (aref error-vector j) (- (aref desired j) (matrix-ref result 0 j))))
+    error-vector))
+
+(defun calc-output-delta (output target activation)
+  (let* ((delta-size (length target))
+         (delta-vector (make-instance 'matrix :cols delta-size))
+         (differencial (activation-differencial activation)))
+    (matrix-do (i 1 j delta-size)
+      (let ((out (matrix-ref output 0 j)))
+        (setf (matrix-ref delta-vector 0 j) (* (funcall differencial out)
+                                               (- (aref target j) out)))))
+    delta-vector))
+
+(defun backprop-learn (network material)
+  (let* ((result (process network (material-input material)))
+         (out-delta (calc-output-delta result (material-output material) (sigmoid))))
+    (matrix* (matrix-ebye out-delta (matrix-transpose result) #'*) 3)))

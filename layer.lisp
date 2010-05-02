@@ -3,15 +3,14 @@
 
 (defclass layer ()
   ((weights :reader weights)
-   (activation :reader activation
-			   :initarg activation
-			   :initform #'(lambda (x) (/ 1 (+ 1 (exp (- x))))))))
+   (outputs)
+   (activation :reader activation :initarg activation :initform (sigmoid))))
 
-(defmethod initialize-instance :after ((instance layer)
-									   &key (inputs 1) (neurons 1))
+(defmethod initialize-instance :after ((instance layer) &key (inputs 1) (neurons 1))
   (setf (slot-value instance 'weights)
-		(matrix-create-tabulated (row inputs col neurons)
-		  (random 1.0))))
+        (matrix-create-tabulated (row inputs col neurons) (random 1.0))))
 
 (defmethod process ((instance layer) (input matrix))
-  (matrix-collect (matrix* input (weights instance)) (activation instance)))
+  (with-slots (activation outputs) instance
+    (setf outputs (matrix-collect (matrix* input (weights instance))
+                                  (activation-function activation)))))
