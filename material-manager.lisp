@@ -14,7 +14,7 @@
     (vector-push material materials)))
 
 (defun pixel-transform (pixel)
-  (cdr (assoc pixel '((_ . 0) (* . 1)))))
+  (cdr (assoc pixel '((_ . -0.5) (* . 0.5)))))
 
 (defun encode-image (image)
   (let* ((image-size (array-dimensions image))

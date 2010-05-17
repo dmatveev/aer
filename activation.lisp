@@ -7,8 +7,8 @@
 (defun activation-differencial (activation)
   (cdr activation))
 
-
 ;; prefefined activation functions
 (defun sigmoid ()
-  (make-activation #'(lambda (x) (/ 1 (+ 1 (exp (- x)))))
-                   #'(lambda (x) (* x (- 1 x)))))
+  (flet ((sigmoid-f (x) (+ -0.5 (/ 1.0 (+ 1 (exp (- x)))))))
+    (make-activation #'sigmoid-f
+                     #'(lambda (x) (* (+ x 0.5) (- 1.5 x))))))

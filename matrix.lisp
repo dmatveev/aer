@@ -25,7 +25,7 @@
 (defmacro matrix-cols (matrix)
   `(second (array-dimensions (data ,matrix))))
 
-(defmacro dimensions (matrix)
+(defmacro matrix-dimensions (matrix)
   `(list (matrix-rows ,matrix) (matrix-cols ,matrix)))
 
 (defmacro matrix-reference (matrix row col)
@@ -77,6 +77,9 @@
 (defmethod matrix* ((left matrix) (right real))
   (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols left))
     (* right (matrix-ref left result-i result-j))))
+
+(defun matrix+= (a b)
+  (matrix-tabulate (a i j) (+ (matrix-ref a i j) (matrix-ref b i j))))
 
 (defmethod print-object ((object matrix) stream)
   (format stream "~a" (data object)))

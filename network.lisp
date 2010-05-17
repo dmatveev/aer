@@ -32,7 +32,33 @@
                                                (- (aref target j) out)))))
     delta-vector))
 
+(defun calc-hidden-delta (neuron-count outputs prev-deltas prev-weights activation)
+  (let ((delta-size neuron-count)
+        (cols (matrix-cols prev-weights))
+        (differencial (activation-differencial activation)))
+    (matrix-create-tabulated (i 1 j delta-size)
+      (* (funcall differencial (matrix-ref outputs 0 j))
+         (loop for c from 0 to (1- cols) summing (* (matrix-ref prev-deltas 0 c)
+                                                    (matrix-ref prev-weights j c)))))))
+
+(defun calculate-corrections (deltas next-outputs nju-param)
+  (matrix* (matrix-ebye deltas (matrix-transpose next-outputs) #'*) nju-param))
+
 (defun backprop-learn (network material)
-  (let* ((result (process network (material-input material)))
-         (out-delta (calc-output-delta result (material-output material) (sigmoid))))
-    (matrix* (matrix-ebye out-delta (matrix-transpose result) #'*) 3)))
+  (let* ((corrections (make-array 5 :adjustable t :fill-pointer 0))
+         (layers (reverse (slot-value network 'layers)))
+         (result (process network (material-input material)))
+         (next-output (outputs (aref layers 1)))
+         (prev-deltas (calc-output-delta result (material-output material) (sigmoid))))
+    (vector-push (calculate-corrections prev-deltas next-output 0.5) corrections)
+    (do ((index 1 (1+ index)))
+        ((= index (1- (length layers))))
+      (setf next-output (outputs (aref layers (1+ index))))
+      (setf prev-deltas (calc-hidden-delta (matrix-cols (outputs (aref layers index)))
+                                           next-output
+                                           prev-deltas
+                                           (weights (aref layers (1- index)))
+                                           (sigmoid)))
+      (vector-push (calculate-corrections prev-deltas next-output 0.5) corrections))
+    (loop for c across corrections for l across layers do
+         (matrix+= (slot-value l 'weights) c))))
