@@ -37,6 +37,22 @@
 (defun (setf matrix-ref) (value matrix row col)
   (setf (matrix-reference matrix row col) value))
 
+(defmacro matrix-do ((row-index rows col-index cols) &body body)
+  `(dotimes (,row-index ,rows)
+     (dotimes (,col-index ,cols)
+       ,@body)))
+
+(defmacro matrix-tabulate ((matrix row-arg col-arg) &body body)
+  `(progn
+     (matrix-do (,row-arg (matrix-rows ,matrix) ,col-arg (matrix-cols ,matrix))
+       (setf (matrix-ref ,matrix ,row-arg ,col-arg) ,@body))
+     ,matrix))
+
+(defmacro matrix-create-tabulated ((row-arg rows-form col-arg cols-form) &body body)
+  (with-gensyms (result)
+    `(let ((,result (make-instance 'matrix :rows ,rows-form :cols ,cols-form)))
+       (matrix-tabulate (,result ,row-arg ,col-arg) ,@body))))
+
 (defun matrix-transpose (matrix)
   (matrix-create-tabulated (i (matrix-cols matrix) j (matrix-rows matrix))
     (matrix-ref matrix j i)))
@@ -44,22 +60,6 @@
 (defun matrix-ebye (top left operator)
   (matrix-create-tabulated (i (matrix-rows left) j (matrix-cols top))
     (funcall operator  (matrix-ref top 0 j) (matrix-ref left i 0))))
-
-(defmacro matrix-do ((row-index rows col-index cols) &body body)
-  `(dotimes (,row-index ,rows)
-     (dotimes (,col-index ,cols)
-       ,@body)))
-
-(defmacro matrix-create-tabulated ((row-arg rows-form col-arg cols-form) &body body)
-  (with-gensyms (result)
-    `(let ((,result (make-instance 'matrix :rows ,rows-form :cols ,cols-form)))
-       (matrix-tabulate (,result ,row-arg ,col-arg) ,@body))))
-
-(defmacro matrix-tabulate ((matrix row-arg col-arg) &body body)
-  `(progn
-     (matrix-do (,row-arg (matrix-rows ,matrix) ,col-arg (matrix-cols ,matrix))
-       (setf (matrix-ref ,matrix ,row-arg ,col-arg) ,@body))
-     ,matrix))
 
 (defmacro matrix-collect (matrix closure)
   `(matrix-create-tabulated (i (matrix-rows ,matrix) j (matrix-cols ,matrix))
