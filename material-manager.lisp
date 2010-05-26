@@ -11,10 +11,10 @@
 
 (defun add-material (manager material)
   (with-slots (materials) manager
-    (vector-push material materials)))
+    (vector-push-extend material materials)))
 
 (defun pixel-transform (pixel)
-  (cdr (assoc pixel '((_ . -0.5) (* . 0.5)))))
+  (cdr (assoc pixel '((_ . -0.4) (* . 0.4)))))
 
 (defun encode-image (image)
   (let* ((image-size (array-dimensions image))
@@ -34,3 +34,15 @@
 (defun add-image (manager source recognized)
   (add-material manager (make-material :input (encode-image source)
                                        :output (encode-recognized recognized))))
+
+(defun process-epoch (manager network precision)
+  (with-slots (materials) manager
+    (loop for material across materials summing
+           (matrix-inject (backprop-learn network material)
+                          #'(lambda (a x) (+ a (* x x))))
+         into s
+         finally (progn (return (>= precision (/ s (length materials))))))))
+
+(defun learn (manager network precision)
+  (do ((counter 0 (1+ counter)))
+      ((process-epoch manager network precision) counter)))

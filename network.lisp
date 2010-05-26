@@ -1,13 +1,24 @@
 (defclass network ()
-  ((layers :initform (make-array 5 :adjustable t :fill-pointer 0)
-           :reader layers)))
+  ((layers :initform (make-array 5 :adjustable t :fill-pointer 0) :reader layers)
+   (speed  :initform 0.1 :initarg :speed :reader learning-speed)))
 
-(defmethod initialize-instance :after ((instance network) &key (inputs 1) (config '(1)))
-  (let ((prev-layer-outputs inputs))
-    (dolist (neurons config)
-      (vector-push (make-instance 'layer :inputs prev-layer-outputs :neurons neurons)
-                   (slot-value instance 'layers)) 
-      (setf prev-layer-outputs neurons))))
+(defmacro add-layer (type initargs container)
+  `(vector-push-extend (apply #'make-instance (cons ,type ,initargs)) ,container))
+
+(defmacro lastp (cell)
+  `(eql (second ,cell) nil))
+
+(defmethod initialize-instance :after ((instance network)
+                                       &key (inputs 1) (config '((:neurons 1))))
+  (with-slots (layers) instance
+    (add-layer 'input-layer `(:inputs 1 :neurons ,inputs) layers)
+    (let ((prev-layer-outputs inputs))
+      (flet ((build (args)
+               (add-layer (if (lastp args) 'output-layer 'hidden-layer)
+                          (append (car args) `(:inputs ,prev-layer-outputs))
+                          layers)
+               (setf prev-layer-outputs (getf (car args) :neurons))))
+        (maplist #'build config)))))
 
 (defmethod process ((instance network) (input matrix))
   (let ((prev-layer-output input))
@@ -15,50 +26,29 @@
       (setf prev-layer-output (process layer prev-layer-output)))
     prev-layer-output))
 
-(defun calculate-error (result desired)
-  (let* ((error-size (length desired))
-         (error-vector (make-array error-size))) 
-    (matrix-do (i 1 j error-size)
-      (setf (aref error-vector j) (- (aref desired j) (matrix-ref result 0 j))))
-    error-vector))
-
-(defun calc-output-delta (output target activation)
-  (let* ((delta-size (length target))
-         (delta-vector (make-instance 'matrix :cols delta-size))
-         (differencial (activation-differencial activation)))
-    (matrix-do (i 1 j delta-size)
-      (let ((out (matrix-ref output 0 j)))
-        (setf (matrix-ref delta-vector 0 j) (* (funcall differencial out)
-                                               (- (aref target j) out)))))
-    delta-vector))
-
-(defun calc-hidden-delta (neuron-count outputs prev-deltas prev-weights activation)
-  (let ((delta-size neuron-count)
-        (cols (matrix-cols prev-weights))
-        (differencial (activation-differencial activation)))
-    (matrix-create-tabulated (i 1 j delta-size)
-      (* (funcall differencial (matrix-ref outputs 0 j))
-         (loop for c from 0 to (1- cols) summing (* (matrix-ref prev-deltas 0 c)
-                                                    (matrix-ref prev-weights j c)))))))
-
 (defun calculate-corrections (deltas next-outputs nju-param)
   (matrix* (matrix-ebye deltas (matrix-transpose next-outputs) #'*) nju-param))
 
+(defun collect-corrections (network context)
+  (loop
+     with speed = (learning-speed network) 
+     with layers = (reverse (layers network))
+     for current-layer across layers 
+     for next-layer across (subseq layers 1) collecting
+       (with-slots (deltas weights) context
+         (setf deltas  (calculate-deltas current-layer context))
+         (setf weights (weights current-layer))
+         (calculate-corrections deltas (outputs next-layer) speed))))
+
 (defun backprop-learn (network material)
-  (let* ((corrections (make-array 5 :adjustable t :fill-pointer 0))
-         (layers (reverse (slot-value network 'layers)))
-         (result (process network (material-input material)))
-         (next-output (outputs (aref layers 1)))
-         (prev-deltas (calc-output-delta result (material-output material) (sigmoid))))
-    (vector-push (calculate-corrections prev-deltas next-output 0.5) corrections)
-    (do ((index 1 (1+ index)))
-        ((= index (1- (length layers))))
-      (setf next-output (outputs (aref layers (1+ index))))
-      (setf prev-deltas (calc-hidden-delta (matrix-cols (outputs (aref layers index)))
-                                           next-output
-                                           prev-deltas
-                                           (weights (aref layers (1- index)))
-                                           (sigmoid)))
-      (vector-push (calculate-corrections prev-deltas next-output 0.5) corrections))
-    (loop for c across corrections for l across layers do
-         (matrix+= (slot-value l 'weights) c))))
+  (process network (material-input material))
+  (loop
+     with layers = (reverse (layers network))
+     with target = (material-output material)
+     with context = (make-bpcontext
+                     :target target
+                     :errors (make-instance 'matrix :cols (length target)))
+     with corrections = (collect-corrections network context)
+     for layer across layers for correction in corrections do
+        (matrix+= (slot-value layer 'weights) correction)
+     finally (return (bpcontext-errors context))))

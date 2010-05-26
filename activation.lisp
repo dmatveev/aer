@@ -9,6 +9,5 @@
 
 ;; prefefined activation functions
 (defun sigmoid ()
-  (flet ((sigmoid-f (x) (+ -0.5 (/ 1.0 (+ 1 (exp (- x)))))))
-    (make-activation #'sigmoid-f
-                     #'(lambda (x) (* (+ x 0.5) (- 1.5 x))))))
+  (make-activation #'(lambda (x) (+ -0.5 (/ 1.0 (+ 1 (exp (- x))))))
+                   #'(lambda (x) (* (+ x 0.5) (- 1.5 x)))))

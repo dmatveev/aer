@@ -5,8 +5,11 @@
 (defgeneric matrix* (left right)
   (:documentation "Multiply two objects"))
 
-(defgeneric matrix-ref (matrix i j)
-  (:documentation "Reference a matrix cell"))
+(defgeneric matrix+ (left right)
+  (:documentation "Matrix sum"))
+
+(defgeneric matrix- (left right)
+  (:documentation "Matrix sub"))
 
 (defclass matrix ()
   ((data :reader data)))
@@ -26,12 +29,12 @@
   `(second (array-dimensions (data ,matrix))))
 
 (defmacro matrix-dimensions (matrix)
-  `(list (matrix-rows ,matrix) (matrix-cols ,matrix)))
+  `(array-dimensions (data ,matrix)))
 
 (defmacro matrix-reference (matrix row col)
   `(aref (data ,matrix) ,row ,col))
 
-(defmethod matrix-ref ((self matrix) row col)
+(defun matrix-ref (self row col)
   (matrix-reference self row col))
 
 (defun (setf matrix-ref) (value matrix row col)
@@ -74,12 +77,32 @@
             ((= i (matrix-cols left)) s)))
       (error "Operation can not be performed")))
 
+(defmethod matrix+ ((left matrix) (right matrix))
+  (if (equal (matrix-dimensions left) (matrix-dimensions right))
+      (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols right))
+        (+ (matrix-ref left result-i result-j)
+           (matrix-ref right result-i result-j)))
+      (error "Operation can not be performed")))
+
+(defmethod matrix- ((left matrix) (right matrix))
+  (if (equal (matrix-dimensions left) (matrix-dimensions right))
+      (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols right))
+        (- (matrix-ref left result-i result-j) (matrix-ref right result-i result-j)))
+      (error "Operation can not be performed")))
+
 (defmethod matrix* ((left matrix) (right real))
   (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols left))
     (* right (matrix-ref left result-i result-j))))
 
 (defun matrix+= (a b)
   (matrix-tabulate (a i j) (+ (matrix-ref a i j) (matrix-ref b i j))))
+
+(defun matrix-inject (matrix closure)
+  (let ((result 0))
+    (destructuring-bind (rows cols) (matrix-dimensions matrix)
+      (matrix-do (i rows j cols)
+        (setf result (funcall closure result (matrix-ref matrix i j)))))
+    result))
 
 (defmethod print-object ((object matrix) stream)
   (format stream "~a" (data object)))
