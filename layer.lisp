@@ -4,42 +4,48 @@
 (defgeneric calculate-deltas (layer context)
   (:documentation "Calculate the deltas"))
 
-(defstruct bpcontext target weights deltas errors)
+(defstruct bpcontext target layer errors)
 
 (defclass layer ()
-  ((weights :reader weights)
-   (outputs :reader outputs)
-   (activation :reader activation :initarg :activation :initform (sigmoid))))
+  ((outputs :reader outputs)))
+
+(defclass educable-layer (layer)
+  ((activation :reader activation :initarg :activation :initform (sigmoid))
+   (weights :reader weights)
+   (corrections)
+   (deltas :reader deltas)))
 
 (defclass input-layer  (layer) ())
-(defclass hidden-layer (layer) ())
-(defclass output-layer (layer) ())
+(defclass hidden-layer (educable-layer) ())
+(defclass output-layer (educable-layer) ())
 
-(defmethod initialize-instance :after ((instance layer) &key (inputs 1) (neurons 1))
-  (setf (slot-value instance 'weights)
-        (matrix-create-tabulated (row inputs col neurons) (- 0.5 (random 1.0)))))
-  
-(defmethod print-object ((object layer) stream)
-  (with-slots (weights activation) object
-      (format stream
-              "<~a inputs: ~a neurons: ~a>"
-              (class-of object)
-              (matrix-rows weights)
-              (matrix-cols weights))))
+(defmethod initialize-instance :after ((instance educable-layer) &key (inputs 1) (neurons 1))
+  (with-slots (outputs weights corrections deltas) instance
+    (setf weights (matrix-create-tabulated (row inputs col neurons) (- 0.5 (random 1.0)))
+          outputs (make-instance 'matrix :cols neurons)
+          deltas (make-instance 'matrix :cols neurons)
+          corrections (make-instance 'matrix :rows inputs :cols neurons)))) 
 
-(defmethod process ((instance layer) (input matrix))
+(defmethod process ((instance educable-layer) (input matrix))
   (with-slots (activation outputs) instance
     (let ((processed (matrix* input (weights instance))))
       (setf outputs (matrix-collect processed (activation-function activation))))))
+
+(defmethod process ((instance educable-layer) (input matrix))
+  (with-slots (activation outputs weights) instance
+    (matrix-*-into outputs input weights)
+    (matrix-collect-into outputs (activation-function activation))))
 
 (defmethod process ((instance input-layer) (input matrix))
   (setf (slot-value instance 'outputs) input))
 
 (defmethod calculate-deltas ((layer hidden-layer) context)
-  (with-slots (outputs activation) layer
-    (with-slots ((prev-deltas deltas) (prev-weights weights)) context
-      (let ((differencial (activation-differencial activation)))
-        (matrix-create-tabulated (i 1 j (matrix-cols outputs))
+  (with-slots (outputs deltas activation) layer
+    (with-slots ((prev-layer layer)) context
+      (let ((differencial (activation-differencial activation))
+            (prev-deltas  (deltas prev-layer))
+            (prev-weights (weights prev-layer)))
+        (matrix-tabulate (deltas i j)
           (* (funcall differencial (matrix-ref outputs 0 j))
              (loop for c from 0 to (1- (matrix-cols prev-weights)) summing
                   (* (matrix-ref prev-deltas  0 c)
@@ -52,10 +58,26 @@
         (- (aref target j) (matrix-ref outputs 0 j))))))
 
 (defmethod calculate-deltas ((layer output-layer) context)
-  (with-slots (outputs activation) layer
+  (with-slots (outputs deltas activation) layer
     (with-slots (errors) context
-      (let ((delta-vector (make-instance 'matrix :cols (matrix-cols outputs)))
-            (differencial (activation-differencial activation)))
-        (matrix-tabulate (delta-vector i j)
+      (let ((differencial (activation-differencial activation)))
+        (matrix-tabulate (deltas i j)
           (* (funcall differencial (matrix-ref outputs 0 j))
              (matrix-ref errors 0 j)))))))
+
+(defun calculate-corrections (layer next-outputs nju-param)
+  (with-slots (deltas corrections) layer
+    (matrix-tabulate (corrections i j)
+      (* nju-param (matrix-ref next-outputs 0 i) (matrix-ref deltas 0 j)))))
+
+(defun apply-corrections (layer)
+  (with-slots (weights corrections) layer
+    (matrix+= weights corrections)))
+
+(defmethod print-object ((object layer) stream)
+  (with-slots (weights activation) object
+      (format stream
+              "<~a inputs: ~a neurons: ~a>"
+              (class-of object)
+              (matrix-rows weights)
+              (matrix-cols weights))))

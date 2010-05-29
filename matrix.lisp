@@ -56,17 +56,13 @@
     `(let ((,result (make-instance 'matrix :rows ,rows-form :cols ,cols-form)))
        (matrix-tabulate (,result ,row-arg ,col-arg) ,@body))))
 
-(defun matrix-transpose (matrix)
-  (matrix-create-tabulated (i (matrix-cols matrix) j (matrix-rows matrix))
-    (matrix-ref matrix j i)))
-
-(defun matrix-ebye (top left operator)
-  (matrix-create-tabulated (i (matrix-rows left) j (matrix-cols top))
-    (funcall operator  (matrix-ref top 0 j) (matrix-ref left i 0))))
-
 (defmacro matrix-collect (matrix closure)
   `(matrix-create-tabulated (i (matrix-rows ,matrix) j (matrix-cols ,matrix))
      (funcall ,closure (matrix-ref ,matrix i j))))
+
+(defun matrix-collect-into (matrix closure)
+  (matrix-tabulate (matrix i j)
+    (funcall closure (matrix-ref matrix i j))))
 
 (defmethod matrix* ((left matrix) (right matrix))
   (if (equal (matrix-cols left) (matrix-rows right))
@@ -75,6 +71,16 @@
              (s 0 (+ s (* (matrix-ref left result-i i)
                           (matrix-ref right i result-j))))) 
             ((= i (matrix-cols left)) s)))
+      (error "Operation can not be performed")))
+
+(defun matrix-*-into (target left right)
+  (if (and (equal (matrix-cols target) (matrix-cols right))
+           (equal (matrix-rows target) (matrix-rows left)))
+      (matrix-tabulate (target t-i t-j)
+        (do ((i 0 (1+ i))
+             (s 0 (+ s (* (matrix-ref left t-i i)
+                          (matrix-ref right i t-j))))) 
+            ((= i (matrix-cols left)) s)))        
       (error "Operation can not be performed")))
 
 (defmethod matrix+ ((left matrix) (right matrix))

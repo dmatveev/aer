@@ -46,3 +46,9 @@
 (defun learn (manager network precision)
   (do ((counter 0 (1+ counter)))
       ((process-epoch manager network precision) counter)))
+
+(defun learn-times (manager network times)
+  (do ((counter 0 (1+ counter)))
+      ((= counter times) times)
+    (process-epoch manager network 0.01)))
+
