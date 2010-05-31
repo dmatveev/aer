@@ -34,21 +34,3 @@
 (defun add-image (manager source recognized)
   (add-material manager (make-material :input (encode-image source)
                                        :output (encode-recognized recognized))))
-
-(defun process-epoch (manager network precision)
-  (with-slots (materials) manager
-    (loop for material across materials summing
-           (matrix-inject (backprop-learn network material)
-                          #'(lambda (a x) (+ a (* x x))))
-         into s
-         finally (progn (return (>= precision (/ s (length materials))))))))
-
-(defun learn (manager network precision)
-  (do ((counter 0 (1+ counter)))
-      ((process-epoch manager network precision) counter)))
-
-(defun learn-times (manager network times)
-  (do ((counter 0 (1+ counter)))
-      ((= counter times) times)
-    (process-epoch manager network 0.01)))
-
