@@ -14,7 +14,8 @@
     (loop for layer across (subseq (layers for) 1) do
          (destructuring-bind (rows cols) (matrix-dimensions (weights layer))
            (vector-push-extend (make-instance 'matrix :rows rows :cols cols) gradients)
-           (vector-push-extend (make-instance 'matrix :rows rows :cols cols) steps)))))
+           (vector-push-extend (make-instance 'matrix :rows rows :cols cols
+                                              :initial-element 0.1) steps)))))
 
 ;;;------------------------------------------------------------
 
@@ -51,11 +52,6 @@
           outputs (make-instance 'matrix :cols neurons)
           deltas (make-instance 'matrix :cols neurons)
           corrections (make-instance 'matrix :rows inputs :cols neurons)))) 
-
-(defmethod process ((instance educable-layer) (input matrix))
-  (with-slots (activation outputs) instance
-    (let ((processed (matrix* input (weights instance))))
-      (setf outputs (matrix-collect processed (activation-function activation))))))
 
 (defmethod process ((instance educable-layer) (input matrix))
   (with-slots (activation outputs weights) instance
@@ -101,7 +97,7 @@
   (with-slots (deltas corrections) layer
     (matrix-tabulate (corrections i j)
       (+ (matrix-ref corrections i j)
-         (* (matrix-ref next-outputs 0 i) (matrix-ref deltas 0 j))))))
+         (- (* (matrix-ref next-outputs 0 i) (matrix-ref deltas 0 j)))))))
 
 (defmethod apply-corrections ((instance educable-layer) scheme)
   (with-slots (weights corrections) instance

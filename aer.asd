@@ -15,4 +15,5 @@
    (:file "matrix")
    (:file "material-manager" :depends-on ("matrix" "material"))
    (:file "layer" :depends-on ("matrix"))
-   (:file "network" :depends-on ("matrix" "material" "layer" "activation"))))
+   (:file "network" :depends-on ("matrix" "material" "layer" "activation")))
+  :depends-on (:closer-mop))
