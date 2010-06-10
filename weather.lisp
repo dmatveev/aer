@@ -1,27 +1,28 @@
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defstruct weather
+	(temperature    25)
+	(pressure       1013.25)
+	(humidity       60)
+	(wind-direction 90)
+	(wind-speed     1)
+	(clouds         0))
+
+  (defstruct weather-ranges
+	(max-temperature    30)   (min-temperature   -30)
+	(max-pressure       1200) (min-pressure       1000)
+	(max-humidity       100)  (min-humidity       0)
+	(max-wind-speed     20)   (min-wind-speed     0)
+	(max-wind-direction 360)  (min-wind-direction 0)
+	(max-clouds         10)   (min-clouds         0))
+
+  (defun symbol-concat (&rest symbols)
+	(intern (apply 'concatenate 'string (mapcar 'symbol-name symbols)))))
+
 (defgeneric encode-meteo (value type ranges)
   (:documentation "Encode the meteorological parameter"))
 
 (defgeneric decode-meteo (value type ranges)
   (:documentation "Decode the meteorological parameter"))
-
-(defun symbol-concat (&rest symbols)
-  (intern (apply 'concatenate 'string (mapcar 'symbol-name symbols))))
-
-(defstruct weather
-  (temperature    25)
-  (pressure       1013.25)
-  (humidity       60)
-  (wind-direction 90)
-  (wind-speed     1)
-  (clouds         0))
-
-(defstruct weather-ranges
-  (max-temperature    30)   (min-temperature   -30)
-  (max-pressure       1200) (min-pressure       1000)
-  (max-humidity       100)  (min-humidity       0)
-  (max-wind-speed     20)   (min-wind-speed     0)
-  (max-wind-direction 360)  (min-wind-direction 0)
-  (max-clouds         10)   (min-clouds         0))
 
 (defmacro ranges-init (ranges info)
   `(progn
