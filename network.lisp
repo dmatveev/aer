@@ -73,7 +73,7 @@
            (matrix-inject (backprop-learn network material scheme)
                           #'rms-helper)
          into s
-         finally (return (/ s (length materials)))))))
+         finally (return (/ s (length materials))))))
 
 ;; (defun calc-update-value (gradient prev-gradient prev-step)
 ;;   (let* ((same-sign (* gradient prev-gradient))

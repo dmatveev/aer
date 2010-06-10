@@ -15,8 +15,8 @@
 ;; 14 - fog (40-47)
 
 (defun read-weather-from (stream fallback)
-  (let ((result (make-weather :wind-direction (read stream)
-                              :wind-speed     (read stream)
+  (let ((result (make-weather :wind-speed     (read stream)
+                              :wind-direction (read stream)
                               :clouds         (read stream)
                               :pressure       (read stream)
                               :humidity       (read stream)
