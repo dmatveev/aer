@@ -1,40 +1,42 @@
-(defclass time-series ()
-  ((series :reader data)))
+(defun numeric-encode (value min-limit max-limit &optional (compress-factor 1))
+  (let ((range (- max-limit min-limit)))
+    (* compress-factor (/ (- value (+ (/ range 2) min-limit)) range))))  
 
-(defmethod initialize-instance :after ((instance time-series) &key (dimensions 5))
-  (setf (slot-value instance 'series) (make-array dimensions :fill-pointer 0)))
+(defun numeric-decode (value min-limit max-limit &optional (compress-factor 1))
+  (let ((range (- max-limit min-limit)))
+    (+ min-limit (/ range 2) (* value (/ range compress-factor)))))
 
-(defun time-series-collect (instance value)
-  (unless (vector-push value (slot-value instance 'series))
-    (format t "Oops!~%")))
+(defgeneric time-series-form (from-sequence policy)
+  (:documentation "Form a time series from the sequence"))
 
-(defun time-series-from (instance sequence)
-  (loop for value across sequence do (time-series-collect instance value)))
+(defmethod time-series-form (from-sequence (policy value-policy))
+  (coerce from-sequence 'list))
 
-(defun time-series-encode-into (instance matrix min-value max-value
-                                &key (offset 0) (compress-factor 0.8) raw)
-  (loop
-       with range = (- max-value min-value)
-       with series = (slot-value instance 'series)
-       with len = (length series)
-       with top = (+ len offset)
-       for value across series
-       for index from offset to top
-       do (setf (matrix-ref matrix 0 (+ offset index))
-                (if raw
-                    value 
-                    (* compress-factor (/ (- value (+ (/ range 2) min-value))
-                                          range))))))
+(defun collect-seq-diffs (sequence base-value)
+  (loop :with prev := base-value :for value :across sequence :collect
+     (let ((v (if (null prev) value (- value prev))))
+       (setq prev value)
+       v)))
 
-(defun time-series-decode-from (matrix min-value max-value
-                                &key (offset 0) (compress-factor 0.8))
-  (loop
-     with range = (- max-value min-value)
-     with len = (matrix-cols matrix)
-     with top = (1- (+ len offset))
-     with result = (make-instance 'time-series :dimensions len)
-     for index from offset upto top
-     do (time-series-collect result
-                             (+ (/ (* range (matrix-ref matrix 0 index)) compress-factor)
-                                (+ min-value (/ range 2))))
-     finally (return result)))
+(defgeneric fore-series-form (prev-sequence fore-sequence policy)
+  (:documentation "TBD"))
+
+(defmethod fore-series-form (prev-sequence fore-sequence (policy value-policy))
+  (declare (ignore prev-sequence policy))
+  (coerce fore-sequence 'list))
+
+(defun encode-input-series (past-data depth pos extractor policy)
+  (let* ((result (make-instance 'matrix :cols (1+ depth))))
+    (encode-time-series (time-series-form past-data policy) result extractor policy)
+    (setf (matrix-ref result 0 depth) (encode-position pos))
+    result))
+
+(defun make-series-material (data depth pos extractor policy)
+  (let* ((past-data (subseq data 0 depth))
+         (fore-data (subseq data depth))
+         (encoded-past (make-instance 'matrix :cols (1+ depth)))
+         (encoded-fore (make-array (length fore-data))))
+    (encode-time-series (time-series-form past-data policy) encoded-past extractor policy)
+    (setf (matrix-ref encoded-past 0 depth) (encode-position pos))
+    (encode-forecast (fore-series-form past-data fore-data policy) encoded-fore extractor policy)
+    (make-material :input encoded-past :output encoded-fore)))

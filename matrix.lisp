@@ -1,5 +1,5 @@
 (defmacro with-gensyms ((&rest names) &body body)
-  `(let ,(loop for n in names collect `(,n (gensym)))
+  `(let ,(loop :for n :in names :collect `(,n (gensym)))
      ,@body))
 
 (defgeneric matrix* (left right)

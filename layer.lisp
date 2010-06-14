@@ -1,23 +1,5 @@
-;; training schemes
-
 (defclass backprop ()
   ())
-
-(defclass rprop ()
-  ((gradients)
-   (steps)))
-
-(defmethod initialize-instance :after ((instance rprop) &key for)
-  (with-slots (gradients steps) instance
-    (setf gradients (make-array 5 :adjustable t :fill-pointer 0)
-          steps (make-array 5 :adjustable t :fill-pointer 0))
-    (loop for layer across (subseq (layers for) 1) do
-         (destructuring-bind (rows cols) (matrix-dimensions (weights layer))
-           (vector-push-extend (make-instance 'matrix :rows rows :cols cols) gradients)
-           (vector-push-extend (make-instance 'matrix :rows rows :cols cols
-                                              :initial-element 0.1) steps)))))
-
-;;;------------------------------------------------------------
 
 (defgeneric process (neural-object input)
   (:documentation "Process the input vector"))
@@ -69,7 +51,7 @@
             (prev-weights (weights prev-layer)))
         (matrix-tabulate (deltas i j)
           (* (funcall differencial (matrix-ref outputs 0 j))
-             (loop for c from 0 to (1- (matrix-cols prev-weights)) summing
+             (loop :for c :from 0 :to (1- (matrix-cols prev-weights)) :summing
                   (* (matrix-ref prev-deltas  0 c)
                      (matrix-ref prev-weights j c)))))))))
 
@@ -92,12 +74,6 @@
     (with-slots (deltas corrections) layer
       (matrix-tabulate (corrections i j)
         (* nju-param (matrix-ref next-outputs 0 i) (matrix-ref deltas 0 j))))))
-
-(defmethod calculate-corrections (network layer next-outputs (scheme rprop))
-  (with-slots (deltas corrections) layer
-    (matrix-tabulate (corrections i j)
-      (+ (matrix-ref corrections i j)
-         (- (* (matrix-ref next-outputs 0 i) (matrix-ref deltas 0 j)))))))
 
 (defmethod apply-corrections ((instance educable-layer) scheme)
   (with-slots (weights corrections) instance

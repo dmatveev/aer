@@ -28,7 +28,7 @@
 
 (defun encode-recognized (recognized)
   (make-array (length recognized)
-              :initial-contents (loop for pixel across recognized collecting
+              :initial-contents (loop :for pixel :across recognized :collecting
                                      (pixel-transform pixel))))
 
 (defun add-image (manager source recognized)
