@@ -37,7 +37,7 @@
              (track-ranges tracker info)
              (setq fallback info)
              (vector-push-extend (weather-temperature info) info-vector)
-             (vector-push-extend (position-in-seazon date)month-vector)))
+             (vector-push-extend date month-vector)))
          :finally (setq ranges (ranges tracker))))))
 
 (defun build-time-series (store data positions ahead depth policy)
@@ -45,8 +45,8 @@
     (if frange (setf (slot-value policy 'ranges) frange)) ; it's ugly, I know
     (loop :for index :from 0 :upto (- (length data) (+ ahead depth) 1) :do
        (let* ((this-data (subseq data index (+ index (+ ahead depth))))
-              (this-pos (aref positions (+ depth index)))
-              (material (make-series-material this-data depth this-pos extractor policy)))
+              (this-date (position-in-seazon (aref positions (+ depth index))))
+              (material (make-series-material this-data depth this-date extractor policy)))
          (add-material store material)))))
                                   
 (defun load-data (instance &key from)

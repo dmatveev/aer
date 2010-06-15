@@ -50,7 +50,7 @@
          (format t "~,1f ~,1f~%" e p)))))
 
 
-(defun forecaster-perform (forecaster input-data &key (show-all t))
+(defun forecaster-perform (forecaster input-data &key (show-past t) (show-forecast t))
   (with-slots (store brain extractor) forecaster
     (let* ((result (process brain input-data))
            (ranges (ranges (slot-value store 'policy)))
@@ -58,7 +58,7 @@
                                      (min-value extractor ranges)
                                      (max-value extractor ranges)
                                      0.8)))
-      (when show-all
+      (when show-past
         (loop
            :with past-data := (decode-matrix input-data
                                              (min-value extractor ranges)
@@ -66,8 +66,9 @@
                                              0.8)
            :for value :across (subseq past-data 0 (1- (length past-data)))  :do
            (format t "~,1f~%" value)))
-      (loop
-         :for p :across processed :do (format t "~,1f~%" p)))))
+      (when show-forecast
+        (loop :for p :across processed :do (format t "~,1f~%" p)))
+      processed)))
 
 (defun decode-array (array min-limit max-limit &optional compress-factor)
   (let ((result (make-array (length array))))

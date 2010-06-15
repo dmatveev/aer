@@ -38,5 +38,6 @@
          (encoded-fore (make-array (length fore-data))))
     (encode-time-series (time-series-form past-data policy) encoded-past extractor policy)
     (setf (matrix-ref encoded-past 0 depth) (encode-position pos))
-    (encode-forecast (fore-series-form past-data fore-data policy) encoded-fore extractor policy)
+    (encode-forecast (fore-series-form past-data fore-data policy)
+                     encoded-fore extractor policy)
     (make-material :input encoded-past :output encoded-fore)))
