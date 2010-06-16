@@ -21,7 +21,7 @@
     (setq policy (make-instance series-policy))
     (if use-range (setq frange use-range))))
 
-(defgeneric read-weather-data (filename info-vector seazon-vector policy)
+(defgeneric read-weather-data (filename info-vector season-vector policy)
   (:documentation "Parse and process the weather data from file"))
 
 (defmethod read-weather-data (filename info-vector month-vector (policy value-policy))
@@ -43,9 +43,9 @@
 (defun build-time-series (store data positions ahead depth policy)
   (with-slots (frange extractor) store
     (if frange (setf (slot-value policy 'ranges) frange)) ; it's ugly, I know
-    (loop :for index :from 0 :upto (- (length data) (+ ahead depth) 1) :do
+    (loop :for index :from 0 :upto (- (length data) (+ ahead depth)) :do
        (let* ((this-data (subseq data index (+ index (+ ahead depth))))
-              (this-date (position-in-seazon (aref positions (+ depth index))))
+              (this-date (position-in-season (aref positions (+ depth index))))
               (material (make-series-material this-data depth this-date extractor policy)))
          (add-material store material)))))
                                   

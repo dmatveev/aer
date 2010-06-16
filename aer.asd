@@ -10,7 +10,8 @@
   :description "Weather prediction system"
   :long-description ""
   :components
-  ((:file "date")
+  ((:file "utils")
+   (:file "date")
    (:file "activation")
    (:file "material")
    (:file "matrix")
@@ -21,7 +22,9 @@
    (:file "time-series-policies")
    (:file "time-series" :depends-on ("matrix" "time-series-policies" "time-series-encoders"))
    (:file "time-series-encoders" :depends-on ("time-series-policies"))
-   (:file "time-series-store" :depends-on ("date" "time-series" "material-manager" "material"))
+   (:file "time-series-store" :depends-on ("date" "time-series" "material-manager" "material"
+                                                  "weather"))
    (:file "forecaster" :depends-on ("time-series-store" "network" "weather"))
-   (:file "synoptic" :depends-on ("forecaster" "weather")))
+   (:file "synoptic" :depends-on ("forecaster" "weather"))
+   (:file "benchmark" :depends-on ("synoptic" "utils")))
   :depends-on (:closer-mop :bordeaux-threads))

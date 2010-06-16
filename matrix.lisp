@@ -2,15 +2,6 @@
   `(let ,(loop :for n :in names :collect `(,n (gensym)))
      ,@body))
 
-(defgeneric matrix* (left right)
-  (:documentation "Multiply two objects"))
-
-(defgeneric matrix+ (left right)
-  (:documentation "Matrix sum"))
-
-(defgeneric matrix- (left right)
-  (:documentation "Matrix sub"))
-
 (defclass matrix ()
   ((data :reader data)))
 
@@ -18,8 +9,7 @@
                                        (rows 1) (cols 1) (initial-element 0)
                                        (from #2A((0)) from-supplied-p))
   (setf (slot-value self 'data)
-        (if from-supplied-p
-            from
+        (if from-supplied-p from
             (make-array `(,rows ,cols) :initial-element initial-element))))
 
 (defmacro matrix-rows (matrix)
@@ -56,22 +46,9 @@
     `(let ((,result (make-instance 'matrix :rows ,rows-form :cols ,cols-form)))
        (matrix-tabulate (,result ,row-arg ,col-arg) ,@body))))
 
-(defmacro matrix-collect (matrix closure)
-  `(matrix-create-tabulated (i (matrix-rows ,matrix) j (matrix-cols ,matrix))
-     (funcall ,closure (matrix-ref ,matrix i j))))
-
 (defun matrix-collect-into (matrix closure)
   (matrix-tabulate (matrix i j)
     (funcall closure (matrix-ref matrix i j))))
-
-(defmethod matrix* ((left matrix) (right matrix))
-  (if (equal (matrix-cols left) (matrix-rows right))
-      (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols right))
-        (do ((i 0 (1+ i))
-             (s 0 (+ s (* (matrix-ref left result-i i)
-                          (matrix-ref right i result-j))))) 
-            ((= i (matrix-cols left)) s)))
-      (error "Operation can not be performed")))
 
 (defun matrix-*-into (target left right)
   (if (and (equal (matrix-cols target) (matrix-cols right))
@@ -82,23 +59,6 @@
                           (matrix-ref right i t-j))))) 
             ((= i (matrix-cols left)) s)))        
       (error "Operation can not be performed")))
-
-(defmethod matrix+ ((left matrix) (right matrix))
-  (if (equal (matrix-dimensions left) (matrix-dimensions right))
-      (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols right))
-        (+ (matrix-ref left result-i result-j)
-           (matrix-ref right result-i result-j)))
-      (error "Operation can not be performed")))
-
-(defmethod matrix- ((left matrix) (right matrix))
-  (if (equal (matrix-dimensions left) (matrix-dimensions right))
-      (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols right))
-        (- (matrix-ref left result-i result-j) (matrix-ref right result-i result-j)))
-      (error "Operation can not be performed")))
-
-(defmethod matrix* ((left matrix) (right real))
-  (matrix-create-tabulated (result-i (matrix-rows left) result-j (matrix-cols left))
-    (* right (matrix-ref left result-i result-j))))
 
 (defun matrix+= (a b)
   (matrix-tabulate (a i j) (+ (matrix-ref a i j) (matrix-ref b i j))))

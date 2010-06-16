@@ -46,11 +46,11 @@
 (defmethod calculate-deltas ((layer hidden-layer) context)
   (with-slots (outputs deltas activation) layer
     (with-slots ((prev-layer layer)) context
-      (let ((differencial (activation-differencial activation))
+      (let ((derivative   (activation-derivative activation))
             (prev-deltas  (deltas prev-layer))
             (prev-weights (weights prev-layer)))
         (matrix-tabulate (deltas i j)
-          (* (funcall differencial (matrix-ref outputs 0 j))
+          (* (funcall derivative (matrix-ref outputs 0 j))
              (loop :for c :from 0 :to (1- (matrix-cols prev-weights)) :summing
                   (* (matrix-ref prev-deltas  0 c)
                      (matrix-ref prev-weights j c)))))))))
@@ -64,9 +64,9 @@
 (defmethod calculate-deltas ((layer output-layer) context)
   (with-slots (outputs deltas activation) layer
     (with-slots (errors) context
-      (let ((differencial (activation-differencial activation)))
+      (let ((derivative (activation-derivative activation)))
         (matrix-tabulate (deltas i j)
-          (* (funcall differencial (matrix-ref outputs 0 j))
+          (* (funcall derivative (matrix-ref outputs 0 j))
              (matrix-ref errors 0 j)))))))
 
 (defmethod calculate-corrections (network layer next-outputs (scheme backprop))
@@ -85,8 +85,7 @@
 
 (defmethod print-object ((object layer) stream)
   (with-slots (weights activation) object
-      (format stream
-              "<~a inputs: ~a neurons: ~a>"
+      (format stream "<~a inputs: ~a neurons: ~a>"
               (class-of object)
               (matrix-rows weights)
               (matrix-cols weights))))
