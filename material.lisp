@@ -1,1 +1,0 @@
-(defstruct material input output)

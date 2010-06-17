@@ -12,12 +12,6 @@
 (defmethod time-series-form (from-sequence (policy value-policy))
   (coerce from-sequence 'list))
 
-(defun collect-seq-diffs (sequence base-value)
-  (loop :with prev := base-value :for value :across sequence :collect
-     (let ((v (if (null prev) value (- value prev))))
-       (setq prev value)
-       v)))
-
 (defgeneric fore-series-form (prev-sequence fore-sequence policy)
   (:documentation "TBD"))
 
